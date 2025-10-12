@@ -68,14 +68,24 @@ public partial class Primitif: RefCounted
 	}
 
     public List<Vector2> Margin()
-	{
-		List<Vector2> res = new List<Vector2>();
-		res.AddRange(LineBresenham(ScreenUtils.MarginLeft, ScreenUtils.MarginTop, ScreenUtils.MarginRight, ScreenUtils.MarginTop));
-		res.AddRange(LineBresenham(ScreenUtils.MarginLeft, ScreenUtils.MarginBottom, ScreenUtils.MarginRight, ScreenUtils.MarginBottom));
-		res.AddRange(LineBresenham(ScreenUtils.MarginLeft, ScreenUtils.MarginTop, ScreenUtils.MarginLeft, ScreenUtils.MarginBottom));
-		res.AddRange(LineBresenham(ScreenUtils.MarginRight, ScreenUtils.MarginTop, ScreenUtils.MarginRight, ScreenUtils.MarginBottom));
-		return res;
-	}
+    {
+        List<Vector2> res = new List<Vector2>();
+        res.AddRange(LineBresenham(ScreenUtils.MarginLeft, ScreenUtils.MarginTop, ScreenUtils.MarginRight, ScreenUtils.MarginTop));
+        res.AddRange(LineBresenham(ScreenUtils.MarginLeft, ScreenUtils.MarginBottom, ScreenUtils.MarginRight, ScreenUtils.MarginBottom));
+        res.AddRange(LineBresenham(ScreenUtils.MarginLeft, ScreenUtils.MarginTop, ScreenUtils.MarginLeft, ScreenUtils.MarginBottom));
+        res.AddRange(LineBresenham(ScreenUtils.MarginRight, ScreenUtils.MarginTop, ScreenUtils.MarginRight, ScreenUtils.MarginBottom));
+        return res;
+    }
+    
+    public List<Vector2> CartesianAxes(int screenWidth, int screenHeight)
+    {
+        List<Vector2> res = new List<Vector2>();
+        int centerX = screenWidth / 2;
+        int centerY = screenHeight / 2;
+        res.AddRange(LineBresenham(0, centerY, screenWidth, centerY)); // Sumbu X
+        res.AddRange(LineBresenham(centerX, 0, centerX, screenHeight)); // Sumbu Y
+        return res;
+    }
 
 	public List<Vector2> Persegi(float x, float y, float ukuran)
 	{
@@ -236,6 +246,54 @@ public partial class Primitif: RefCounted
         points.Add(new Vector2(xCenter - x, yCenter + y));
         points.Add(new Vector2(xCenter + x, yCenter - y));
         points.Add(new Vector2(xCenter - x, yCenter - y));
+    }
+
+    public List<Vector2> Polygon(List<Vector2> points)
+    {
+        List<Vector2> polygonPoints = new List<Vector2>();
+        for (int i = 0; i < points.Count; i++)
+        {
+            int nextIndex = (i + 1) % points.Count;
+            // Menggunakan 'this' karena metodenya ada di kelas ini
+            polygonPoints.AddRange(this.LineBresenham(points[i].X, points[i].Y, points[nextIndex].X, points[nextIndex].Y));
+        }
+        return polygonPoints;
+    }
+
+    public List<Vector2> Hexagon(Vector2 center, float side)
+    {
+        List<Vector2> points = new List<Vector2>();
+        for (int i = 0; i < 6; i++)
+        {
+            float angle = Mathf.DegToRad(60 * i);
+            points.Add(center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * side);
+        }
+        return this.Polygon(points);
+    }
+
+    public List<Vector2> SegitigaSamaSisi(Vector2 center, float side)
+    {
+        float height = side * Mathf.Sqrt(3) / 2;
+        List<Vector2> points = new List<Vector2>
+        {
+            center + new Vector2(0, height * 2 / 3),
+            center + new Vector2(-side / 2, -height / 3),
+            center + new Vector2(side / 2, -height / 3)
+        };
+        return this.Polygon(points);
+    }
+
+    public List<Vector2> BelahKetupatBiru(Vector2 center, float side)
+    {
+        float h = side * Mathf.Sqrt(3) / 2;
+        List<Vector2> points = new List<Vector2>
+        {
+            center + new Vector2(0, h / 2),
+            center + new Vector2(side / 2, 0),
+            center + new Vector2(0, -h / 2),
+            center + new Vector2(-side / 2, 0)
+        };
+        return this.Polygon(points);
     }
     
 }

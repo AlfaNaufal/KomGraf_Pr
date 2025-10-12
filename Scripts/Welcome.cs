@@ -24,6 +24,11 @@ public partial class Welcome: Control
 		GetTree().ChangeSceneToFile("res://Scenes/Karya3.tscn");
 	}
 
+	private void _on_BtnPlay_pressed()
+	{
+		GetTree().ChangeSceneToFile("res://Scenes/Play.tscn");
+	}
+
 	private void _on_BtnAbout_pressed()
 	{
 		GetTree().ChangeSceneToFile("res://Scenes/About.tscn");

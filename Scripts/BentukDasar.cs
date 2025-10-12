@@ -60,18 +60,73 @@ public partial class BentukDasar: RefCounted, IDisposable
         return action();
     }
 
+    // public List<Vector2> Polygon(List<Vector2> points)
+    // {
+    //     List<Vector2> checkResult = NodeUtils.CheckPrimitif(_primitif);
+    //     if (checkResult != null) return checkResult;
+
+    //     List<Vector2> polygonPoints = new List<Vector2>();
+    //     for (int i = 0; i < points.Count; i++)
+    //     {
+    //         int nextIndex = (i + 1) % points.Count; // Wrap around to the first point for the last line
+    //         polygonPoints.AddRange(_primitif.LineBresenham(points[i].X, points[i].Y, points[nextIndex].X, points[nextIndex].Y));
+    //     }
+    //     return polygonPoints;
+    // }
+
     public List<Vector2> Polygon(List<Vector2> points)
     {
-        List<Vector2> checkResult = NodeUtils.CheckPrimitif(_primitif);
-        if (checkResult != null) return checkResult;
+        return CheckPrimitifAndCall(() => _primitif.Polygon(points));
+    }
 
-        List<Vector2> polygonPoints = new List<Vector2>();
-        for (int i = 0; i < points.Count; i++)
+    // Tambahkan 3 wrapper baru ini
+    public List<Vector2> Hexagon(Vector2 center, float side)
+    {
+        return CheckPrimitifAndCall(() => _primitif.Hexagon(center, side));
+    }
+
+    public List<Vector2> SegitigaSamaSisi(Vector2 center, float side)
+    {
+        return CheckPrimitifAndCall(() => _primitif.SegitigaSamaSisi(center, side));
+    }
+
+    public List<Vector2> BelahKetupat(Vector2 center, float side)
+    {
+        return CheckPrimitifAndCall(() => _primitif.BelahKetupatBiru(center, side));
+    }
+
+    public List<Vector2> GetHexagonVertices(Vector2 center, float side)
+    {
+        List<Vector2> points = new List<Vector2>();
+        for (int i = 0; i < 6; i++)
         {
-            int nextIndex = (i + 1) % points.Count; // Wrap around to the first point for the last line
-            polygonPoints.AddRange(_primitif.LineBresenham(points[i].X, points[i].Y, points[nextIndex].X, points[nextIndex].Y));
+            float angle = Mathf.DegToRad(60 * i);
+            points.Add(center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * side);
         }
-        return polygonPoints;
+        return points;
+    }
+
+    public List<Vector2> GetSegitigaSamaSisiVertices(Vector2 center, float side)
+    {
+        float height = side * Mathf.Sqrt(3) / 2;
+        return new List<Vector2>
+        {
+            center + new Vector2(0, height * 2 / 3),
+            center + new Vector2(-side / 2, -height / 3),
+            center + new Vector2(side / 2, -height / 3)
+        };
+    }
+
+    public List<Vector2> GetBelahKetupatVertices(Vector2 center, float side)
+    {
+        float h = side * Mathf.Sqrt(3) / 2;
+        return new List<Vector2>
+        {
+            center + new Vector2(0, h / 2),
+            center + new Vector2(side / 2, 0),
+            center + new Vector2(0, -h / 2),
+            center + new Vector2(-side / 2, 0)
+        };
     }
 
     public new void Dispose()

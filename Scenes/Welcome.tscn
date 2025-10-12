@@ -44,6 +44,10 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 text = "Karya 3"
 
+[node name="BtnPlay" type="Button" parent="MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Play Game"
+
 [node name="BtnAbout" type="Button" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
@@ -69,6 +73,7 @@ text = "Menu"
 [connection signal="pressed" from="MarginContainer/VBoxContainer/BtnKarya1" to="." method="_on_BtnKarya1_pressed"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/BtnKarya2" to="." method="_on_BtnKarya2_pressed"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/BtnKarya3" to="." method="_on_BtnKarya3_pressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/BtnPlay" to="." method="_on_BtnPlay_pressed"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/BtnAbout" to="." method="_on_BtnAbout_pressed"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/BtnGuide" to="." method="_on_BtnGuide_pressed"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/BtnExit" to="." method="_on_BtnExit_pressed"]
