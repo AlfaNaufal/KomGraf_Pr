@@ -1,7 +1,7 @@
 using Godot;
 using System;
 
-public partial class KoordinatUtils : Node
+public static class KoordinatUtils
 {
     private static int screenWidth;
     private static int screenHeight;

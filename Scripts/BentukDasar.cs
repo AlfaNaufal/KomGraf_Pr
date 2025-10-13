@@ -117,16 +117,86 @@ public partial class BentukDasar: RefCounted, IDisposable
         };
     }
 
-    public List<Vector2> GetBelahKetupatVertices(Vector2 center, float side)
+public List<Vector2> GetBelahKetupatVertices(Vector2 center, float diagonalPanjang, float diagonalPendek)
+{
+    float halfPanjang = diagonalPanjang / 2;
+    float halfPendek = diagonalPendek / 2;
+    return new List<Vector2>
     {
-        float h = side * Mathf.Sqrt(3) / 2;
-        return new List<Vector2>
-        {
-            center + new Vector2(0, h / 2),
-            center + new Vector2(side / 2, 0),
-            center + new Vector2(0, -h / 2),
-            center + new Vector2(-side / 2, 0)
+        center + new Vector2(0, halfPanjang),       // Titik atas
+        center + new Vector2(halfPendek, 0),       // Titik kanan
+        center + new Vector2(0, -halfPanjang),      // Titik bawah
+        center + new Vector2(-halfPendek, 0)        // Titik kiri
+    };
+}
+
+    public List<Vector2> GetPersegiVertices(Vector2 center, float size)
+    {
+        float half = size / 2;
+        return new List<Vector2> {
+            center + new Vector2(-half, half), center + new Vector2(half, half),
+            center + new Vector2(half, -half), center + new Vector2(-half, -half)
         };
+    }
+
+    public List<Vector2> GetPersegiPanjangVertices(Vector2 center, float width, float height)
+    {
+        float halfW = width / 2;
+        float halfH = height / 2;
+        return new List<Vector2> {
+            center + new Vector2(-halfW, halfH), center + new Vector2(halfW, halfH),
+            center + new Vector2(halfW, -halfH), center + new Vector2(-halfW, -halfH)
+        };
+    }
+
+    public List<Vector2> GetSegitigaSikuVertices(Vector2 center, float alas, float tinggi)
+    {
+        return new List<Vector2> {
+            center + new Vector2(0, tinggi / 2),
+            center + new Vector2(0, -tinggi / 2),
+            center + new Vector2(alas, -tinggi / 2)
+        };
+    }
+
+    public List<Vector2> GetTrapesiumSikuVertices(Vector2 center, float atas, float bawah, float tinggi)
+    {
+        float halfH = tinggi / 2;
+        return new List<Vector2> {
+            center + new Vector2(0, halfH), center + new Vector2(atas, halfH),
+            center + new Vector2(bawah, -halfH), center + new Vector2(0, -halfH)
+        };
+    }
+
+    public List<Vector2> GetTrapesiumSamaKakiVertices(Vector2 center, float atas, float bawah, float tinggi)
+    {
+        float halfH = tinggi / 2;
+        float diff = (bawah - atas) / 2;
+        return new List<Vector2> {
+            center + new Vector2(atas / 2, halfH), center + new Vector2(-atas / 2, halfH),
+            center + new Vector2(-bawah / 2, -halfH), center + new Vector2(bawah / 2, -halfH)
+        };
+    }
+
+    public List<Vector2> GetJajarGenjangVertices(Vector2 center, float alas, float tinggi, float offset)
+    {
+        float halfA = alas / 2;
+        float halfH = tinggi / 2;
+        return new List<Vector2> {
+            center + new Vector2(halfA + offset, halfH), center + new Vector2(-halfA + offset, halfH),
+            center + new Vector2(halfA - offset, -halfH), center + new Vector2(-halfA - offset, -halfH)
+        };
+    }
+
+    public List<Vector2> GetLingkaranVertices(Vector2 center, int radius)
+    {
+        // Ini memanggil fungsi Primitif yang sudah ada, jadi ini benar
+        return _primitif.CircleMidPoint((int)center.X, (int)center.Y, radius);
+    }
+
+    public List<Vector2> GetElipsVertices(Vector2 center, int rx, int ry)
+    {
+        // Ini juga memanggil fungsi Primitif yang sudah ada
+        return _primitif.EllipseMidpoint((int)center.X, (int)center.Y, rx, ry);
     }
 
     public new void Dispose()

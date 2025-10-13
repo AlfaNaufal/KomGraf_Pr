@@ -5,16 +5,21 @@ using System.Collections.Generic;
 public partial class Bentuk : Area2D
 {
 
+    private Slot _overlappingSlot = null;
+    private bool _isLocked = false;
+
     [Signal]
     public delegate void SpawnRequestedEventHandler(ShapeType type, Color color);
 
-    // Variabel publik untuk diatur dari luar (oleh Play.cs)
     public bool IsTemplate { get; set; } = false;
     public ShapeType TypeToCreate { get; set; }
     public Color ColorToSet { get; set; }
     public Vector2 StartPosition { get; set; }
 
-    public enum ShapeType { Hexagon, SegitigaSamaSisi, BelahKetupat }
+    public enum ShapeType { 
+        Hexagon, SegitigaSamaSisi, BelahKetupat, Persegi, PersegiPanjang, 
+        SegitigaSiku, TrapesiumSiku, TrapesiumSamaKaki, JajarGenjang
+    }
 
     private Transformasi _transformasi = new Transformasi();
     private float[,] _matriksTransformasi = new float[3, 3];
@@ -27,84 +32,142 @@ public partial class Bentuk : Area2D
 
     public override void _Ready()
     {
-        // --- TAHAP 1: Persiapan Node ---
         _collisionShape = GetNode<CollisionShape2D>("CollisionShape2D");
         this.InputEvent += _on_InputEvent;
 
-        // --- TAHAP 2: Inisialisasi Data & Matriks ---
         Transformasi.Matrix3x3Identity(_matriksTransformasi);
         _shapeColor = ColorToSet;
 
-        // --- TAHAP 3: Buat Titik Sudut (Vertices) ---
-        float side;
+        float sisiDasar = 2.5f * GameScale.PixelsPerCm; // Sisi hexagon kuning sebagai acuan (2.5 cm)
+
         switch (TypeToCreate)
         {
             case ShapeType.Hexagon:
-                side = 2.5f * GameScale.PixelsPerCm;
-                _originalVertices = _bentukDasar.GetHexagonVertices(Vector2.Zero, side);
+                // Sisi hexagon = sisi persegi
+                _originalVertices = _bentukDasar.GetHexagonVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm);
                 break;
             case ShapeType.SegitigaSamaSisi:
-                side = 2.4f * GameScale.PixelsPerCm;
-                _originalVertices = _bentukDasar.GetSegitigaSamaSisiVertices(Vector2.Zero, side);
+                _originalVertices = _bentukDasar.GetSegitigaSamaSisiVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm);
                 break;
             case ShapeType.BelahKetupat:
-                side = 2.4f * GameScale.PixelsPerCm;
-                _originalVertices = _bentukDasar.GetBelahKetupatVertices(Vector2.Zero, side);
+                // Diagonal pendek = sisi persegi, Diagonal panjang = tinggi 2 segitiga
+                _originalVertices = _bentukDasar.GetBelahKetupatVertices(Vector2.Zero, (2.0f * Mathf.Sqrt(3)) * GameScale.PixelsPerCm, 2.0f * GameScale.PixelsPerCm);
+                break;
+            case ShapeType.Persegi:
+                _originalVertices = _bentukDasar.GetPersegiVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm);
+                break;
+            case ShapeType.PersegiPanjang:
+                _originalVertices = _bentukDasar.GetPersegiPanjangVertices(Vector2.Zero, 4.0f * GameScale.PixelsPerCm, 2.0f * GameScale.PixelsPerCm);
+                break;
+            case ShapeType.TrapesiumSamaKaki:
+                // Sisi atas = 2cm, Sisi bawah = 4cm
+                _originalVertices = _bentukDasar.GetTrapesiumSamaKakiVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm, 4.0f * GameScale.PixelsPerCm, (2.0f * Mathf.Sqrt(3) / 2) * GameScale.PixelsPerCm);
+                break;
+            case ShapeType.JajarGenjang:
+                // Alas = 2cm
+                _originalVertices = _bentukDasar.GetJajarGenjangVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm, (2.0f * Mathf.Sqrt(3) / 2) * GameScale.PixelsPerCm, 1.0f * GameScale.PixelsPerCm);
+                break;
+
+            // Bentuk non-standar lainnya kita buat proporsional dengan sisi 2cm
+            case ShapeType.SegitigaSiku:
+                _originalVertices = _bentukDasar.GetSegitigaSikuVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm, 2.0f * GameScale.PixelsPerCm);
+                break;
+            case ShapeType.TrapesiumSiku:
+                _originalVertices = _bentukDasar.GetTrapesiumSikuVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm, 4.0f * GameScale.PixelsPerCm, 2.0f * GameScale.PixelsPerCm);
                 break;
         }
 
-        // --- TAHAP 4: Terapkan Posisi Awal ---
         var dummyPivot = Vector2.Zero;
         _transformasi.Translation(_matriksTransformasi, StartPosition.X, StartPosition.Y, ref dummyPivot);
-        
-        // --- TAHAP 5: Gambar & Siapkan Kolisi untuk Pertama Kali ---
+
         ApplyTransformationAndDraw();
     }
 
-    // SEMUA FUNGSI LAIN DI BAWAH INI TETAP SAMA
+    private void _on_area_entered(Area2D area)
+    {
+        if (area is Slot slot)
+        {
+            _overlappingSlot = slot;
+        }
+    }
+
+    private void _on_area_exited(Area2D area)
+    {
+        if (area == _overlappingSlot)
+        {
+            _overlappingSlot = null;
+        }
+    }
+    
     private void _on_InputEvent(Node viewport, InputEvent @event, long shapeIdx)
     {
-        // Hanya proses event tombol mouse kiri
+        if (_isLocked) return; // Jika sudah terkunci, jangan lakukan apa-apa
+
         if (@event is InputEventMouseButton mouseButton && mouseButton.ButtonIndex == MouseButton.Left)
         {
-            // Jika ini adalah templat dan mouse ditekan
             if (IsTemplate && mouseButton.Pressed)
             {
-                EmitSignal(SignalName.SpawnRequested, (int)GetShapeTypeFromVertices(), Variant.From(_shapeColor));
-                return; // Hentikan proses lebih lanjut untuk templat
+                EmitSignal(SignalName.SpawnRequested, (int)TypeToCreate, Variant.From(_shapeColor));
+                return;
             }
 
-            // Jika ini bukan templat, atur status _isDragging berdasarkan apakah tombol sedang ditekan atau tidak
             _isDragging = mouseButton.Pressed;
 
             if (_isDragging)
             {
-                // Aksi saat MULAI menyeret
                 _lastMousePosition = KoordinatUtils.WorldToCartesian(GetGlobalMousePosition());
                 this.ZIndex = 10;
             }
-            else
+            else // Ini dieksekusi saat mouse dilepas
             {
-                // Aksi saat BERHENTI menyeret (mouse dilepas)
                 this.ZIndex = 0;
-                // Di sinilah nanti kita akan meletakkan logika SNAP
-                GD.Print("Balok dilepas!"); 
+
+                // --- LOGIKA SNAP ---
+                if (_overlappingSlot != null && _overlappingSlot.TargetShape == this.TypeToCreate)
+                {
+                    // Kunci jawaban cocok!
+                    _matriksTransformasi = (float[,])_overlappingSlot.TargetMatrix.Clone();
+                    ApplyTransformationAndDraw();
+                    _isLocked = true; // Kunci balok
+                    GD.Print("Snap berhasil untuk " + _overlappingSlot.Name);
+                }
             }
         }
     }
+    
+    // private void _on_InputEvent(Node viewport, InputEvent @event, long shapeIdx)
+    // {
+    //     if (@event is InputEventMouseButton mouseButton && mouseButton.ButtonIndex == MouseButton.Left)
+    //     {
+    //         if (IsTemplate)
+    //         {
+    //             if (mouseButton.Pressed) // Hanya spawn saat mouse ditekan
+    //             {
+    //                 EmitSignal(SignalName.SpawnRequested, (int)TypeToCreate, Variant.From(_shapeColor));
+    //             }
+    //             return;
+    //         }
 
-    private ShapeType GetShapeTypeFromVertices() {
-        if (_originalVertices.Count == 6) return ShapeType.Hexagon;
-        if (_originalVertices.Count == 4) return ShapeType.BelahKetupat;
-        if (_originalVertices.Count == 3) return ShapeType.SegitigaSamaSisi;
-        return ShapeType.Hexagon;
-    }
+    //         // Logika untuk balok yang bisa digerakkan
+    //         if (mouseButton.Pressed)
+    //         {
+    //             _isDragging = true;
+    //             _lastMousePosition = KoordinatUtils.WorldToCartesian(GetGlobalMousePosition());
+    //             this.ZIndex = 10;
+    //         }
+    //         else // Ini hanya akan tereksekusi saat mouse dilepas
+    //         {
+    //             _isDragging = false;
+    //             this.ZIndex = 0;
+    //         }
+    //     }
+    // }
 
     public override void _Input(InputEvent @event) {
         if (_isDragging && @event is InputEventKey eventKey && eventKey.Pressed) {
             float rotationAngle = 0;
-            if (eventKey.Keycode == Key.Q) rotationAngle = 15;
-            else if (eventKey.Keycode == Key.E) rotationAngle = -15;
+            if (eventKey.Keycode == Key.E) rotationAngle = 15;
+            else if (eventKey.Keycode == Key.Q) rotationAngle = -15;
             if (rotationAngle != 0) {
                 var transformedVertices = _transformasi.GetTransformPoint(_matriksTransformasi, _originalVertices);
                 var pivot = GetVerticesCenter(transformedVertices);
@@ -115,13 +178,6 @@ public partial class Bentuk : Area2D
                 ApplyTransformationAndDraw();
             }
         }
-    }
-
-    private Vector2 GetVerticesCenter(List<Vector2> vertices) {
-        if (vertices == null || vertices.Count == 0) return Vector2.Zero;
-        float sumX = 0; float sumY = 0;
-        foreach (var v in vertices) { sumX += v.X; sumY += v.Y; }
-        return new Vector2(sumX / vertices.Count, sumY / vertices.Count);
     }
 
     public override void _Process(double delta) {
@@ -140,7 +196,15 @@ public partial class Bentuk : Area2D
         }
     }
 
+    private Vector2 GetVerticesCenter(List<Vector2> vertices) {
+        if (vertices == null || vertices.Count == 0) return Vector2.Zero;
+        float sumX = 0; float sumY = 0;
+        foreach (var v in vertices) { sumX += v.X; sumY += v.Y; }
+        return new Vector2(sumX / vertices.Count, sumY / vertices.Count);
+    }
+    
     private void ApplyTransformationAndDraw() {
+        if (_originalVertices == null) return;
         var transformedVertices = _transformasi.GetTransformPoint(_matriksTransformasi, _originalVertices);
         var worldPointsForCollision = new List<Vector2>();
         foreach (var p in transformedVertices) {
