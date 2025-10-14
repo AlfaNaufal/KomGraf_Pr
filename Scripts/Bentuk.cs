@@ -6,7 +6,16 @@ public partial class Bentuk : Area2D
 {
 
     private Slot _overlappingSlot = null;
-    private bool _isLocked = false;
+    // private bool _isLocked = false;
+    private Slot _snappedToSlot = null; // Untuk mengingat slot mana yang kita tempati
+    private float _currentRotationDegrees = 0;
+    private const float SNAP_DISTANCE_THRESHOLD = 75.0f; // Toleransi jarak dalam piksel
+    // private const float SNAP_ROTATION_THRESHOLD = 25.0f; // Toleransi rotasi dalam derajat
+
+    [Signal]
+    public delegate void BlockSnappedEventHandler();
+    [Signal]
+    public delegate void BlockUnsnappedEventHandler();
 
     [Signal]
     public delegate void SpawnRequestedEventHandler(ShapeType type, Color color);
@@ -101,35 +110,52 @@ public partial class Bentuk : Area2D
     
     private void _on_InputEvent(Node viewport, InputEvent @event, long shapeIdx)
     {
-        if (_isLocked) return; // Jika sudah terkunci, jangan lakukan apa-apa
-
-        if (@event is InputEventMouseButton mouseButton && mouseButton.ButtonIndex == MouseButton.Left)
+        // Fungsi ini sekarang HANYA untuk memulai DRAG
+        if (@event is InputEventMouseButton mouseButton && mouseButton.ButtonIndex == MouseButton.Left && mouseButton.Pressed)
         {
-            if (IsTemplate && mouseButton.Pressed)
+            if (IsTemplate)
             {
                 EmitSignal(SignalName.SpawnRequested, (int)TypeToCreate, Variant.From(_shapeColor));
                 return;
             }
-
-            _isDragging = mouseButton.Pressed;
-
-            if (_isDragging)
+            
+            // Kosongkan slot jika kita mengambil balok yang sudah di-snap
+            if (_snappedToSlot != null)
             {
-                _lastMousePosition = KoordinatUtils.WorldToCartesian(GetGlobalMousePosition());
-                this.ZIndex = 10;
+                _snappedToSlot.IsFilled = false;
+                _snappedToSlot = null;
+                EmitSignal(SignalName.BlockUnsnapped);
             }
-            else // Ini dieksekusi saat mouse dilepas
-            {
-                this.ZIndex = 0;
 
-                // --- LOGIKA SNAP ---
-                if (_overlappingSlot != null && _overlappingSlot.TargetShape == this.TypeToCreate)
+            _isDragging = true;
+            _lastMousePosition = KoordinatUtils.WorldToCartesian(GetGlobalMousePosition());
+            this.ZIndex = 10;
+            GetViewport().SetInputAsHandled();
+        }
+        else{
+            // --- LOGIKA SNAP YANG DIPERBARUI ---
+            if (_overlappingSlot != null && !_overlappingSlot.IsFilled && _overlappingSlot.TargetShape == this.TypeToCreate)
+            {
+                // Dapatkan pusat balok saat ini & pusat slot target
+                var currentVertices = _transformasi.GetTransformPoint(_matriksTransformasi, _originalVertices);
+                var currentCenter = GetVerticesCenter(currentVertices);
+                var targetMatrix = _overlappingSlot.TargetMatrix;
+                var targetCenter = new Vector2(targetMatrix[0, 2], targetMatrix[1, 2]);
+
+                float distance = currentCenter.DistanceTo(targetCenter);
+                
+                // HANYA CEK JARAK, TIDAK PERLU CEK ROTASI
+                if (distance < SNAP_DISTANCE_THRESHOLD)
                 {
                     // Kunci jawaban cocok!
                     _matriksTransformasi = (float[,])_overlappingSlot.TargetMatrix.Clone();
                     ApplyTransformationAndDraw();
-                    _isLocked = true; // Kunci balok
+                    
+                    _overlappingSlot.IsFilled = true; // Tandai slot ini sudah terisi
+                    _snappedToSlot = _overlappingSlot; // Ingat kita menempel di sini
                     GD.Print("Snap berhasil untuk " + _overlappingSlot.Name);
+
+                    EmitSignal(SignalName.BlockSnapped); // Kirim sinyal kemenangan!
                 }
             }
         }
@@ -164,24 +190,68 @@ public partial class Bentuk : Area2D
     // }
 
     public override void _Input(InputEvent @event) {
-        if (_isDragging && @event is InputEventKey eventKey && eventKey.Pressed) {
-            float rotationAngle = 0;
-            if (eventKey.Keycode == Key.E) rotationAngle = 15;
-            else if (eventKey.Keycode == Key.Q) rotationAngle = -15;
-            if (rotationAngle != 0) {
-                var transformedVertices = _transformasi.GetTransformPoint(_matriksTransformasi, _originalVertices);
-                var pivot = GetVerticesCenter(transformedVertices);
-                var rotationMatrix = new float[3, 3];
-                Transformasi.Matrix3x3Identity(rotationMatrix);
-                _transformasi.RotationClockwise(rotationMatrix, rotationAngle, pivot);
-                Transformasi.Matrix3x3Multiplication(rotationMatrix, _matriksTransformasi);
-                ApplyTransformationAndDraw();
+        // --- Bagian 1: Logika Melepas Mouse (Global) ---
+        if (@event is InputEventMouseButton mouseButton && mouseButton.ButtonIndex == MouseButton.Left && !mouseButton.Pressed)
+        {
+            if (_isDragging)
+            {
+                _isDragging = false;
+                this.ZIndex = 0;
+
+                // --- LOGIKA SNAP ---
+                if (_overlappingSlot != null && !_overlappingSlot.IsFilled && _overlappingSlot.TargetShape == this.TypeToCreate)
+                {
+                    var currentVertices = _transformasi.GetTransformPoint(_matriksTransformasi, _originalVertices);
+                    var currentCenter = GetVerticesCenter(currentVertices);
+                    var targetMatrix = _overlappingSlot.TargetMatrix;
+                    var targetCenter = new Vector2(targetMatrix[0, 2], targetMatrix[1, 2]);
+                    float distance = currentCenter.DistanceTo(targetCenter);
+
+                    if (distance < SNAP_DISTANCE_THRESHOLD)
+                    {
+                        _matriksTransformasi = (float[,])_overlappingSlot.TargetMatrix.Clone();
+                        ApplyTransformationAndDraw();
+                        _snappedToSlot = _overlappingSlot;
+                        _snappedToSlot.IsFilled = true;
+                        GD.Print("Snap berhasil untuk " + _overlappingSlot.Name);
+                    }
+                }
             }
+        }
+
+        // --- Bagian 2: Logika Rotasi (Keyboard) ---
+        if (_isDragging && @event is InputEventKey eventKey && eventKey.Pressed)
+        {
+            // Kode rotasi Anda yang sudah ada tetap di sini...
+            // (Ini bisa dipindahkan ke _Process dengan Input.IsKeyPressed jika masih bermasalah,
+            // tapi dengan perbaikan di atas, seharusnya sudah stabil)
         }
     }
 
     public override void _Process(double delta) {
-        if (_isDragging) {
+        if (_isDragging) 
+        {
+            // --- LOGIKA ROTASI BARU (DIPINDAHKAN KE SINI) ---
+            float rotationChange = 0;
+            if (Input.IsKeyPressed(Key.E)) rotationChange = 15;
+            else if (Input.IsKeyPressed(Key.Q)) rotationChange = -15;
+            
+            if (rotationChange != 0)
+            {
+                // Terapkan rotasi. Kita kalikan dengan delta agar kecepatan rotasi konsisten.
+                float angleToRotate = rotationChange * (float)delta * 5.0f; // Angka 5.0f adalah pengali kecepatan, bisa disesuaikan
+                _currentRotationDegrees += angleToRotate;
+                _currentRotationDegrees = (_currentRotationDegrees % 360 + 360) % 360;
+
+                var transformedVertices = _transformasi.GetTransformPoint(_matriksTransformasi, _originalVertices);
+                var pivot = GetVerticesCenter(transformedVertices);
+                var rotationMatrix = new float[3, 3];
+                Transformasi.Matrix3x3Identity(rotationMatrix);
+                _transformasi.RotationClockwise(rotationMatrix, angleToRotate, pivot);
+                Transformasi.Matrix3x3Multiplication(rotationMatrix, _matriksTransformasi);
+            }
+
+            // --- LOGIKA MENGGESER (TETAP SAMA) ---
             var currentMousePosition = KoordinatUtils.WorldToCartesian(GetGlobalMousePosition());
             var mouseDelta = currentMousePosition - _lastMousePosition;
             if (mouseDelta.LengthSquared() > 0) {
@@ -190,8 +260,9 @@ public partial class Bentuk : Area2D
                 var dummyPivot = Vector2.Zero;
                 _transformasi.Translation(translationMatrix, mouseDelta.X, mouseDelta.Y, ref dummyPivot);
                 Transformasi.Matrix3x3Multiplication(translationMatrix, _matriksTransformasi);
-                ApplyTransformationAndDraw();
             }
+            
+            ApplyTransformationAndDraw();
             _lastMousePosition = currentMousePosition;
         }
     }

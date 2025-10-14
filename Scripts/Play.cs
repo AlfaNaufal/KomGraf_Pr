@@ -5,10 +5,18 @@ public partial class Play : Node2D
 {
     
     public enum Level { AirHujan, Payung, PenyiramTanaman }
-    private Level _currentLevel = Level.AirHujan;
+    // private Level _currentLevel = Level.AirHujan;
+    private Level _currentLevel = Level.Payung;
+    // private Level _currentLevel = Level.PenyiramTanaman;
 
     private PackedScene _bentukScene = GD.Load<PackedScene>("res://Scenes/Bentuk.tscn");
     private OutlinePuzzle _outlinePuzzle;
+
+    private int _totalSlotsInLevel = 0;
+    private int _filledSlots = 0;
+
+    private HUD _hud;
+    private int _time = 0;
 
     public override void _Ready()
     {
@@ -17,9 +25,33 @@ public partial class Play : Node2D
         KoordinatUtils.Initialize((int)viewportSize.X, (int)viewportSize.Y);
 
         _outlinePuzzle = GetNode<OutlinePuzzle>("OutlinePuzzle");
+        _outlinePuzzle.OutlineDrawn += _on_Outline_Drawn;
         _outlinePuzzle.DrawLevel(_currentLevel);
-        
+
+        // _totalSlotsInLevel = _outlinePuzzle.TotalSlots; // Dapatkan total slot dari outline
+        GD.Print("Total slot untuk level ini: " + _totalSlotsInLevel);
+
         CreatePalette();
+
+        var hudScene = GD.Load<PackedScene>("res://Scenes/HUD.tscn");
+        _hud = hudScene.Instantiate<HUD>();
+        AddChild(_hud);
+
+        // 2. Perbarui tampilan level di HUD
+        _hud.UpdateLevel(_currentLevel.ToString());
+    }
+
+    private void _on_Timer_timeout()
+    {
+        _time++;
+        _hud.UpdateTime(_time);
+    }
+    
+    private void _on_Outline_Drawn()
+    {
+        // Fungsi ini hanya akan berjalan SETELAH outline selesai digambar
+        _totalSlotsInLevel = _outlinePuzzle.TotalSlots;
+        GD.Print("Total slot untuk level ini (setelah digambar): " + _totalSlotsInLevel);
     }
 
     private void CreatePalette()
@@ -73,7 +105,36 @@ public partial class Play : Node2D
         newBlock.TypeToCreate = type;
         newBlock.ColorToSet = color;
         newBlock.StartPosition = position;
+
+        newBlock.BlockSnapped += _on_Block_Snapped; // Hubungkan sinyal dari balok ke fungsi kita
+        newBlock.BlockUnsnapped += _on_Block_Unsnapped;
+
         AddChild(newBlock);
+    }
+
+    private void _on_Block_Snapped()
+    {
+        _filledSlots++;
+        GD.Print($"Slot terisi: {_filledSlots} / {_totalSlotsInLevel}");
+
+        if (_filledSlots >= _totalSlotsInLevel)
+        {
+            GD.Print("========================");
+            GD.Print("SELAMAT, ANDA MENANG!");
+            GD.Print("========================");
+            // Di sini nanti kita bisa menampilkan layar kemenangan atau lanjut ke level berikutnya
+            GetNode<Timer>("Timer").Stop();
+            GD.Print("MENANG!");
+        }
+    }
+
+    private void _on_Block_Unsnapped()
+    {
+        if (_filledSlots > 0)
+        {
+            _filledSlots--;
+        }
+        GD.Print($"Balok diambil, slot terisi: {_filledSlots} / {_totalSlotsInLevel}");
     }
 
 }
