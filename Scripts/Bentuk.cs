@@ -5,20 +5,16 @@ using System.Collections.Generic;
 public partial class Bentuk : Area2D
 {
 
+    [Signal] public delegate void BlockSnappedEventHandler();
+    [Signal] public delegate void BlockUnsnappedEventHandler();
+    [Signal] public delegate void SpawnRequestedEventHandler(ShapeType type, Color color);
+
     private Slot _overlappingSlot = null;
     // private bool _isLocked = false;
     private Slot _snappedToSlot = null; // Untuk mengingat slot mana yang kita tempati
     private float _currentRotationDegrees = 0;
     private const float SNAP_DISTANCE_THRESHOLD = 75.0f; // Toleransi jarak dalam piksel
     // private const float SNAP_ROTATION_THRESHOLD = 25.0f; // Toleransi rotasi dalam derajat
-
-    [Signal]
-    public delegate void BlockSnappedEventHandler();
-    [Signal]
-    public delegate void BlockUnsnappedEventHandler();
-
-    [Signal]
-    public delegate void SpawnRequestedEventHandler(ShapeType type, Color color);
 
     public bool IsTemplate { get; set; } = false;
     public ShapeType TypeToCreate { get; set; }
@@ -43,23 +39,21 @@ public partial class Bentuk : Area2D
     {
         _collisionShape = GetNode<CollisionShape2D>("CollisionShape2D");
         this.InputEvent += _on_InputEvent;
+        this.AreaEntered += _on_area_entered;
+        this.AreaExited += _on_area_exited;
 
         Transformasi.Matrix3x3Identity(_matriksTransformasi);
         _shapeColor = ColorToSet;
 
-        float sisiDasar = 2.5f * GameScale.PixelsPerCm; // Sisi hexagon kuning sebagai acuan (2.5 cm)
-
         switch (TypeToCreate)
         {
             case ShapeType.Hexagon:
-                // Sisi hexagon = sisi persegi
                 _originalVertices = _bentukDasar.GetHexagonVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm);
                 break;
             case ShapeType.SegitigaSamaSisi:
                 _originalVertices = _bentukDasar.GetSegitigaSamaSisiVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm);
                 break;
             case ShapeType.BelahKetupat:
-                // Diagonal pendek = sisi persegi, Diagonal panjang = tinggi 2 segitiga
                 _originalVertices = _bentukDasar.GetBelahKetupatVertices(Vector2.Zero, (2.0f * Mathf.Sqrt(3)) * GameScale.PixelsPerCm, 2.0f * GameScale.PixelsPerCm);
                 break;
             case ShapeType.Persegi:
@@ -69,15 +63,11 @@ public partial class Bentuk : Area2D
                 _originalVertices = _bentukDasar.GetPersegiPanjangVertices(Vector2.Zero, 4.0f * GameScale.PixelsPerCm, 2.0f * GameScale.PixelsPerCm);
                 break;
             case ShapeType.TrapesiumSamaKaki:
-                // Sisi atas = 2cm, Sisi bawah = 4cm
                 _originalVertices = _bentukDasar.GetTrapesiumSamaKakiVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm, 4.0f * GameScale.PixelsPerCm, (2.0f * Mathf.Sqrt(3) / 2) * GameScale.PixelsPerCm);
                 break;
             case ShapeType.JajarGenjang:
-                // Alas = 2cm
                 _originalVertices = _bentukDasar.GetJajarGenjangVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm, (2.0f * Mathf.Sqrt(3) / 2) * GameScale.PixelsPerCm, 1.0f * GameScale.PixelsPerCm);
                 break;
-
-            // Bentuk non-standar lainnya kita buat proporsional dengan sisi 2cm
             case ShapeType.SegitigaSiku:
                 _originalVertices = _bentukDasar.GetSegitigaSikuVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm, 2.0f * GameScale.PixelsPerCm);
                 break;
@@ -97,6 +87,10 @@ public partial class Bentuk : Area2D
         if (area is Slot slot)
         {
             _overlappingSlot = slot;
+        
+        }else if (area.Name == "TrashArea"){
+
+            this.Modulate = new Color(1, 1, 1, 0.5f);
         }
     }
 
@@ -105,6 +99,9 @@ public partial class Bentuk : Area2D
         if (area == _overlappingSlot)
         {
             _overlappingSlot = null;
+
+        }else if (area.Name == "TrashArea"){
+            this.Modulate = new Color(1, 1, 1, 1);
         }
     }
     
@@ -160,34 +157,6 @@ public partial class Bentuk : Area2D
             }
         }
     }
-    
-    // private void _on_InputEvent(Node viewport, InputEvent @event, long shapeIdx)
-    // {
-    //     if (@event is InputEventMouseButton mouseButton && mouseButton.ButtonIndex == MouseButton.Left)
-    //     {
-    //         if (IsTemplate)
-    //         {
-    //             if (mouseButton.Pressed) // Hanya spawn saat mouse ditekan
-    //             {
-    //                 EmitSignal(SignalName.SpawnRequested, (int)TypeToCreate, Variant.From(_shapeColor));
-    //             }
-    //             return;
-    //         }
-
-    //         // Logika untuk balok yang bisa digerakkan
-    //         if (mouseButton.Pressed)
-    //         {
-    //             _isDragging = true;
-    //             _lastMousePosition = KoordinatUtils.WorldToCartesian(GetGlobalMousePosition());
-    //             this.ZIndex = 10;
-    //         }
-    //         else // Ini hanya akan tereksekusi saat mouse dilepas
-    //         {
-    //             _isDragging = false;
-    //             this.ZIndex = 0;
-    //         }
-    //     }
-    // }
 
     public override void _Input(InputEvent @event) {
         // --- Bagian 1: Logika Melepas Mouse (Global) ---
@@ -197,6 +166,15 @@ public partial class Bentuk : Area2D
             {
                 _isDragging = false;
                 this.ZIndex = 0;
+
+                // Cek apakah balok dilepas di atas area sampah
+                var trashArea = GetNode<Area2D>("%TrashArea");
+                if (this.OverlapsArea(trashArea))
+                {
+                    // Hapus diri sendiri
+                    QueueFree();
+                    return; // Hentikan agar tidak menjalankan logika snap
+                }
 
                 // --- LOGIKA SNAP ---
                 if (_overlappingSlot != null && !_overlappingSlot.IsFilled && _overlappingSlot.TargetShape == this.TypeToCreate)
@@ -217,14 +195,6 @@ public partial class Bentuk : Area2D
                     }
                 }
             }
-        }
-
-        // --- Bagian 2: Logika Rotasi (Keyboard) ---
-        if (_isDragging && @event is InputEventKey eventKey && eventKey.Pressed)
-        {
-            // Kode rotasi Anda yang sudah ada tetap di sini...
-            // (Ini bisa dipindahkan ke _Process dengan Input.IsKeyPressed jika masih bermasalah,
-            // tapi dengan perbaikan di atas, seharusnya sudah stabil)
         }
     }
 
