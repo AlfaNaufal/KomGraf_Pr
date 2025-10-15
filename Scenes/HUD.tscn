@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://b4a6sgakudu1l"]
+[gd_scene load_steps=3 format=3 uid="uid://b4a6sgakudu1l"]
 
 [ext_resource type="Script" uid="uid://c4b85msh8sba1" path="res://Scripts/HUD.cs" id="1_sd512"]
+[ext_resource type="FontFile" uid="uid://dn8rfxtqntjp0" path="res://Assets/Font/Bebas_Neue,Bungee,Kode_Mono/Bungee/Bungee-Regular.ttf" id="2_jo1ms"]
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_sd512")
@@ -23,3 +24,13 @@ text = "0"
 [node name="Level" type="Label" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "1"
+
+[node name="WinMessageLabel" type="Label" parent="MarginContainer/VBoxContainer"]
+visible = false
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 6
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("2_jo1ms")
+theme_override_font_sizes/font_size = 50
+text = "SELAMAT, ANDA MENANG!"

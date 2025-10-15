@@ -5,8 +5,8 @@ public partial class Play : Node2D
 {
     
     public enum Level { AirHujan, Payung, PenyiramTanaman }
-    // private Level _currentLevel = Level.AirHujan;
-    private Level _currentLevel = Level.Payung;
+    private Level _currentLevel = Level.AirHujan;
+    // private Level _currentLevel = Level.Payung;
     // private Level _currentLevel = Level.PenyiramTanaman;
 
     private PackedScene _bentukScene = GD.Load<PackedScene>("res://Scenes/Bentuk.tscn");
@@ -41,7 +41,7 @@ public partial class Play : Node2D
         _hud.UpdateLevel(_currentLevel.ToString());
     }
 
-    private void _on_Timer_timeout()
+    private void _on_timer_timeout()
     {
         _time++;
         _hud.UpdateTime(_time);
@@ -124,6 +124,7 @@ public partial class Play : Node2D
             GD.Print("========================");
             // Di sini nanti kita bisa menampilkan layar kemenangan atau lanjut ke level berikutnya
             GetNode<Timer>("Timer").Stop();
+            _hud.ShowWinMessage();
             GD.Print("MENANG!");
         }
     }
