@@ -9,7 +9,9 @@ public partial class HUD : CanvasLayer
 	
 	private Label _timeLabel;
 	private Label _levelLabel;
-	private HBoxContainer _winContainer;
+	private VBoxContainer _winContainer;
+	private HBoxContainer _winButtonContainer;
+	private Label _winMessageLabel;
 	private Button _nextLevelButton;
 	private Button _menuButton;
 
@@ -17,9 +19,11 @@ public partial class HUD : CanvasLayer
 	{
 		_timeLabel = GetNode<Label>("MarginContainer/VBoxContainer/Waktu");
 		_levelLabel = GetNode<Label>("MarginContainer/VBoxContainer/Level");
-		_winContainer = GetNode<HBoxContainer>("MarginContainer/WinButtonContainer");
-		_nextLevelButton = GetNode<Button>("MarginContainer/WinButtonContainer/NextLevelButton");
-		_menuButton = GetNode<Button>("MarginContainer/WinButtonContainer/MenuButton");
+		_winContainer = GetNode<VBoxContainer>("MarginContainer/WinContainer");
+		_winMessageLabel = GetNode<Label>("MarginContainer/WinContainer/WinMessageLabel");
+		_winButtonContainer = GetNode<HBoxContainer>("MarginContainer/WinContainer/WinButtonContainer");
+		_nextLevelButton = GetNode<Button>("MarginContainer/WinContainer/WinButtonContainer/NextLevelButton");
+		_menuButton = GetNode<Button>("MarginContainer/WinContainer/WinButtonContainer/MenuButton");
 		
 		// Hubungkan sinyal tombol ke fungsi internal
 		_nextLevelButton.Pressed += OnNextLevelPressed;
@@ -44,11 +48,19 @@ public partial class HUD : CanvasLayer
 	public void ShowWinUI()
 	{
 		_winContainer.Show();
+		_winButtonContainer.Show();
+		_winMessageLabel.Show();
+		_nextLevelButton.Show();
+		_menuButton.Show();
 	}
 
 	public void HideWinUI()
 	{
 		_winContainer.Hide();
+		_winButtonContainer.Hide();
+		_winMessageLabel.Hide();
+		_nextLevelButton.Hide();
+		_menuButton.Hide();
 	}
 
 	// Fungsi internal yang akan memancarkan sinyal keluar

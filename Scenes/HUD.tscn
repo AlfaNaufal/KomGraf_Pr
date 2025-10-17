@@ -25,14 +25,12 @@ text = "0"
 layout_mode = 2
 text = "1"
 
-[node name="WinButtonContainer" type="HBoxContainer" parent="MarginContainer"]
-visible = false
-layout_direction = 3
+[node name="WinContainer" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
-size_flags_horizontal = 4
 size_flags_vertical = 4
+alignment = 1
 
-[node name="WinMessageLabel" type="Label" parent="MarginContainer/WinButtonContainer"]
+[node name="WinMessageLabel" type="Label" parent="MarginContainer/WinContainer"]
 visible = false
 layout_mode = 2
 size_flags_horizontal = 4
@@ -42,10 +40,17 @@ theme_override_fonts/font = ExtResource("2_jo1ms")
 theme_override_font_sizes/font_size = 50
 text = "SELAMAT, ANDA MENANG!"
 
-[node name="NextLevelButton" type="Button" parent="MarginContainer/WinButtonContainer"]
+[node name="WinButtonContainer" type="HBoxContainer" parent="MarginContainer/WinContainer"]
 layout_mode = 2
-text = "Lanjut"
+size_flags_horizontal = 4
+alignment = 1
 
-[node name="MenuButton" type="Button" parent="MarginContainer/WinButtonContainer"]
+[node name="MenuButton" type="Button" parent="MarginContainer/WinContainer/WinButtonContainer"]
+visible = false
 layout_mode = 2
 text = "Menu Utama"
+
+[node name="NextLevelButton" type="Button" parent="MarginContainer/WinContainer/WinButtonContainer"]
+visible = false
+layout_mode = 2
+text = "Lanjut"

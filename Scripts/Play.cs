@@ -70,23 +70,27 @@ public partial class Play : Node2D
 		// -----------------------------
 
 		GameScale.Initialize(25.0f);
-        var viewportSize = GetViewportRect().Size;
-        KoordinatUtils.Initialize((int)viewportSize.X, (int)viewportSize.Y);
+		var viewportSize = GetViewportRect().Size;
+		KoordinatUtils.Initialize((int)viewportSize.X, (int)viewportSize.Y);
 
-        _outlinePuzzle = GetNode<OutlinePuzzle>("OutlinePuzzle");
-        _outlinePuzzle.OutlineDrawn += _on_Outline_Drawn;
-        
-        _hud = GetNode<HUD>("HUD");
-        _hud.NextLevelRequested += OnNextLevel;
-        _hud.MainMenuRequested += OnMainMenu;
-        
-        // Buat container pertama kali saat game dimulai
-        _levelContainer = new Node();
+		_outlinePuzzle = GetNode<OutlinePuzzle>("OutlinePuzzle");
+		_outlinePuzzle.OutlineDrawn += _on_Outline_Drawn;
+		
+		_hud = GetNode<HUD>("HUD");
+		_hud.NextLevelRequested += OnNextLevel;
+		_hud.MainMenuRequested += OnMainMenu;
+		
+		// Buat container pertama kali saat game dimulai
+		_levelContainer = new Node();
 		_levelContainer.Name = "LevelContainer"; // Beri nama agar mudah di-debug
-        AddChild(_levelContainer);
-        AddChild(_hud);
-        
-        LoadLevel(_currentLevel);
+		AddChild(_levelContainer);
+		
+		// --- PERBAIKAN DI SINI ---
+		// Pastikan HUD adalah child dari "Play", BUKAN "_levelContainer"
+		// Baris AddChild(_hud) yang salah sudah dihapus dari bawah.
+		// Node HUD sudah ada di scene Play.tscn, jadi kita tidak perlu AddChild() lagi.
+		
+		LoadLevel(_currentLevel);
 	}
 
 	private void LoadLevel(Level level)
@@ -168,7 +172,7 @@ public partial class Play : Node2D
 		AddTemplateToPalette(Bentuk.ShapeType.TrapesiumSamaKaki, Colors.Red, nextPos());
 		AddTemplateToPalette(Bentuk.ShapeType.Hexagon, Colors.Yellow, nextPos());
 		AddTemplateToPalette(Bentuk.ShapeType.BelahKetupat, Colors.Blue, nextPos());
-		AddTemplateToPalette(Bentuk.ShapeType.JajarGenjang, Colors.Tan, nextPos());
+		// AddTemplateToPalette(Bentuk.ShapeType.JajarGenjang, Colors.Tan, nextPos());
 	}
 
 	private void AddTemplateToPalette(Bentuk.ShapeType type, Color color, Vector2 position)
