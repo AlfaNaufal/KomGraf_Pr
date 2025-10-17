@@ -5,20 +5,22 @@ using System.Collections.Generic;
 public partial class Bentuk : Area2D
 {
 
-    private Slot _overlappingSlot = null;
-    // private bool _isLocked = false;
-    private Slot _snappedToSlot = null; // Untuk mengingat slot mana yang kita tempati
-    private float _currentRotationDegrees = 0;
-    private const float SNAP_DISTANCE_THRESHOLD = 75.0f; // Toleransi jarak dalam piksel
-    // private const float SNAP_ROTATION_THRESHOLD = 25.0f; // Toleransi rotasi dalam derajat
+	private Slot _overlappingSlot = null;
+	// private bool _isLocked = false;
+	private Slot _snappedToSlot = null; // Untuk mengingat slot mana yang kita tempati
+	private float _currentRotationDegrees = 0;
+	private const float SNAP_DISTANCE_THRESHOLD = 75.0f; // Toleransi jarak dalam piksel
+	// private const float SNAP_ROTATION_THRESHOLD = 25.0f; // Toleransi rotasi dalam derajat
+	
+	private bool _isOverTrash = false;
 
-    [Signal]
-    public delegate void BlockSnappedEventHandler();
-    [Signal]
-    public delegate void BlockUnsnappedEventHandler();
+	[Signal]
+	public delegate void BlockSnappedEventHandler();
+	[Signal]
+	public delegate void BlockUnsnappedEventHandler();
 
-    [Signal]
-    public delegate void SpawnRequestedEventHandler(ShapeType type, Color color);
+	[Signal]
+	public delegate void SpawnRequestedEventHandler(ShapeType type, Color color);
 
 	public bool IsTemplate { get; set; } = false;
 	public ShapeType TypeToCreate { get; set; }
@@ -39,52 +41,52 @@ public partial class Bentuk : Area2D
 	private bool _isDragging = false;
 	private Vector2 _lastMousePosition;
 
-    public override void _Ready()
-    {
-        _collisionShape = GetNode<CollisionShape2D>("CollisionShape2D");
-        this.InputEvent += _on_InputEvent;
+	public override void _Ready()
+	{
+		_collisionShape = GetNode<CollisionShape2D>("CollisionShape2D");
+		this.InputEvent += _on_InputEvent;
 
-        Transformasi.Matrix3x3Identity(_matriksTransformasi);
-        _shapeColor = ColorToSet;
+		Transformasi.Matrix3x3Identity(_matriksTransformasi);
+		_shapeColor = ColorToSet;
 
-        float sisiDasar = 2.5f * GameScale.PixelsPerCm; // Sisi hexagon kuning sebagai acuan (2.5 cm)
+		float sisiDasar = 2.5f * GameScale.PixelsPerCm; // Sisi hexagon kuning sebagai acuan (2.5 cm)
 
-        switch (TypeToCreate)
-        {
-            case ShapeType.Hexagon:
-                // Sisi hexagon = sisi persegi
-                _originalVertices = _bentukDasar.GetHexagonVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm);
-                break;
-            case ShapeType.SegitigaSamaSisi:
-                _originalVertices = _bentukDasar.GetSegitigaSamaSisiVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm);
-                break;
-            case ShapeType.BelahKetupat:
-                // Diagonal pendek = sisi persegi, Diagonal panjang = tinggi 2 segitiga
-                _originalVertices = _bentukDasar.GetBelahKetupatVertices(Vector2.Zero, (2.0f * Mathf.Sqrt(3)) * GameScale.PixelsPerCm, 2.0f * GameScale.PixelsPerCm);
-                break;
-            case ShapeType.Persegi:
-                _originalVertices = _bentukDasar.GetPersegiVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm);
-                break;
-            case ShapeType.PersegiPanjang:
-                _originalVertices = _bentukDasar.GetPersegiPanjangVertices(Vector2.Zero, 4.0f * GameScale.PixelsPerCm, 2.0f * GameScale.PixelsPerCm);
-                break;
-            case ShapeType.TrapesiumSamaKaki:
-                // Sisi atas = 2cm, Sisi bawah = 4cm
-                _originalVertices = _bentukDasar.GetTrapesiumSamaKakiVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm, 4.0f * GameScale.PixelsPerCm, (2.0f * Mathf.Sqrt(3) / 2) * GameScale.PixelsPerCm);
-                break;
-            case ShapeType.JajarGenjang:
-                // Alas = 2cm
-                _originalVertices = _bentukDasar.GetJajarGenjangVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm, (2.0f * Mathf.Sqrt(3) / 2) * GameScale.PixelsPerCm, 1.0f * GameScale.PixelsPerCm);
-                break;
+		switch (TypeToCreate)
+		{
+			case ShapeType.Hexagon:
+				// Sisi hexagon = sisi persegi
+				_originalVertices = _bentukDasar.GetHexagonVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm);
+				break;
+			case ShapeType.SegitigaSamaSisi:
+				_originalVertices = _bentukDasar.GetSegitigaSamaSisiVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm);
+				break;
+			case ShapeType.BelahKetupat:
+				// Diagonal pendek = sisi persegi, Diagonal panjang = tinggi 2 segitiga
+				_originalVertices = _bentukDasar.GetBelahKetupatVertices(Vector2.Zero, (2.0f * Mathf.Sqrt(3)) * GameScale.PixelsPerCm, 2.0f * GameScale.PixelsPerCm);
+				break;
+			case ShapeType.Persegi:
+				_originalVertices = _bentukDasar.GetPersegiVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm);
+				break;
+			case ShapeType.PersegiPanjang:
+				_originalVertices = _bentukDasar.GetPersegiPanjangVertices(Vector2.Zero, 4.0f * GameScale.PixelsPerCm, 2.0f * GameScale.PixelsPerCm);
+				break;
+			case ShapeType.TrapesiumSamaKaki:
+				// Sisi atas = 2cm, Sisi bawah = 4cm
+				_originalVertices = _bentukDasar.GetTrapesiumSamaKakiVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm, 4.0f * GameScale.PixelsPerCm, (2.0f * Mathf.Sqrt(3) / 2) * GameScale.PixelsPerCm);
+				break;
+			case ShapeType.JajarGenjang:
+				// Alas = 2cm
+				_originalVertices = _bentukDasar.GetJajarGenjangVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm, (2.0f * Mathf.Sqrt(3) / 2) * GameScale.PixelsPerCm, 1.0f * GameScale.PixelsPerCm);
+				break;
 
-            // Bentuk non-standar lainnya kita buat proporsional dengan sisi 2cm
-            case ShapeType.SegitigaSiku:
-                _originalVertices = _bentukDasar.GetSegitigaSikuVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm, 2.0f * GameScale.PixelsPerCm);
-                break;
-            case ShapeType.TrapesiumSiku:
-                _originalVertices = _bentukDasar.GetTrapesiumSikuVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm, 4.0f * GameScale.PixelsPerCm, 2.0f * GameScale.PixelsPerCm);
-                break;
-        }
+			// Bentuk non-standar lainnya kita buat proporsional dengan sisi 2cm
+			case ShapeType.SegitigaSiku:
+				_originalVertices = _bentukDasar.GetSegitigaSikuVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm, 2.0f * GameScale.PixelsPerCm);
+				break;
+			case ShapeType.TrapesiumSiku:
+				_originalVertices = _bentukDasar.GetTrapesiumSikuVertices(Vector2.Zero, 2.0f * GameScale.PixelsPerCm, 4.0f * GameScale.PixelsPerCm, 2.0f * GameScale.PixelsPerCm);
+				break;
+		}
 
 		var dummyPivot = Vector2.Zero;
 		_transformasi.Translation(_matriksTransformasi, StartPosition.X, StartPosition.Y, ref dummyPivot);
@@ -92,40 +94,50 @@ public partial class Bentuk : Area2D
 		ApplyTransformationAndDraw();
 	}
 
-    private void _on_area_entered(Area2D area)
-    {
-        if (area is Slot slot)
-        {
-            _overlappingSlot = slot;
-        }
-    }
+	private void _on_area_entered(Area2D area)
+	{
+		if (area is Slot slot)
+		{
+			_overlappingSlot = slot;
+		}
+		else if (area.IsInGroup("Trash"))
+		{
+			_isOverTrash = true;
+			Modulate = new Color(1, 1, 1, 0.5f); // Jadi transparan
+		}
+	}
 
-    private void _on_area_exited(Area2D area)
-    {
-        if (area == _overlappingSlot)
-        {
-            _overlappingSlot = null;
-        }
-    }
-    
-    private void _on_InputEvent(Node viewport, InputEvent @event, long shapeIdx)
-    {
-        // Fungsi ini sekarang HANYA untuk memulai DRAG
-        if (@event is InputEventMouseButton mouseButton && mouseButton.ButtonIndex == MouseButton.Left && mouseButton.Pressed)
-        {
-            if (IsTemplate)
-            {
-                EmitSignal(SignalName.SpawnRequested, (int)TypeToCreate, Variant.From(_shapeColor));
-                return;
-            }
-            
-            // Kosongkan slot jika kita mengambil balok yang sudah di-snap
-            if (_snappedToSlot != null)
-            {
-                _snappedToSlot.IsFilled = false;
-                _snappedToSlot = null;
-                EmitSignal(SignalName.BlockUnsnapped);
-            }
+	private void _on_area_exited(Area2D area)
+	{
+		if (area == _overlappingSlot)
+		{
+			_overlappingSlot = null;
+		}
+		else if (area.IsInGroup("Trash"))
+		{
+			_isOverTrash = false;
+			Modulate = new Color(1, 1, 1, 1); // Kembali normal
+		}
+	}
+	
+	private void _on_InputEvent(Node viewport, InputEvent @event, long shapeIdx)
+	{
+		// Fungsi ini sekarang HANYA untuk memulai DRAG
+		if (@event is InputEventMouseButton mouseButton && mouseButton.ButtonIndex == MouseButton.Left && mouseButton.Pressed)
+		{
+			if (IsTemplate)
+			{
+				EmitSignal(SignalName.SpawnRequested, (int)TypeToCreate, Variant.From(_shapeColor));
+				return;
+			}
+			
+			// Kosongkan slot jika kita mengambil balok yang sudah di-snap
+			if (_snappedToSlot != null)
+			{
+				_snappedToSlot.IsFilled = false;
+				_snappedToSlot = null;
+				EmitSignal(SignalName.BlockUnsnapped);
+			}
 
 			_isDragging = true;
 			_lastMousePosition = KoordinatUtils.WorldToCartesian(GetGlobalMousePosition());
@@ -151,52 +163,38 @@ public partial class Bentuk : Area2D
 					_matriksTransformasi = (float[,])_overlappingSlot.TargetMatrix.Clone();
 					ApplyTransformationAndDraw();
 					
-					_overlappingSlot.IsFilled = true; // Tandai slot ini sudah terisi
-					_snappedToSlot = _overlappingSlot; // Ingat kita menempel di sini
+					// _overlappingSlot.IsFilled = true; // Tandai slot ini sudah terisi
+					// _snappedToSlot = _overlappingSlot; // Ingat kita menempel di sini
+
+					_snappedToSlot = _overlappingSlot;
+					_snappedToSlot.IsFilled = true;
+
+					EmitSignal(SignalName.BlockSnapped); // Kirim sinyal kemenangan!
+					
 					GD.Print("Snap berhasil untuk " + _overlappingSlot.Name);
 
-                    EmitSignal(SignalName.BlockSnapped); // Kirim sinyal kemenangan!
-                }
-            }
-        }
-    }
-    
-    // private void _on_InputEvent(Node viewport, InputEvent @event, long shapeIdx)
-    // {
-    //     if (@event is InputEventMouseButton mouseButton && mouseButton.ButtonIndex == MouseButton.Left)
-    //     {
-    //         if (IsTemplate)
-    //         {
-    //             if (mouseButton.Pressed) // Hanya spawn saat mouse ditekan
-    //             {
-    //                 EmitSignal(SignalName.SpawnRequested, (int)TypeToCreate, Variant.From(_shapeColor));
-    //             }
-    //             return;
-    //         }
+				}
+			}
+		}
+	}
 
-    //         // Logika untuk balok yang bisa digerakkan
-    //         if (mouseButton.Pressed)
-    //         {
-    //             _isDragging = true;
-    //             _lastMousePosition = KoordinatUtils.WorldToCartesian(GetGlobalMousePosition());
-    //             this.ZIndex = 10;
-    //         }
-    //         else // Ini hanya akan tereksekusi saat mouse dilepas
-    //         {
-    //             _isDragging = false;
-    //             this.ZIndex = 0;
-    //         }
-    //     }
-    // }
+	public override void _Input(InputEvent @event) {
+		// --- Bagian 1: Logika Melepas Mouse (Global) ---
+		// if (@event is InputEventMouseButton mouseButton && mouseButton.ButtonIndex == MouseButton.Left && !mouseButton.Pressed)
+		if (_isDragging && @event is InputEventMouseButton mouseButton && mouseButton.ButtonIndex == MouseButton.Left && !mouseButton.Pressed)
+		{
+			_isDragging = false;
+			this.ZIndex = 0;
 
-    public override void _Input(InputEvent @event) {
-        // --- Bagian 1: Logika Melepas Mouse (Global) ---
-        if (@event is InputEventMouseButton mouseButton && mouseButton.ButtonIndex == MouseButton.Left && !mouseButton.Pressed)
-        {
-            if (_isDragging)
-            {
-                _isDragging = false;
-                this.ZIndex = 0;
+			if (_isDragging)
+			{
+				
+				// Jika dilepas di atas area sampah, hapus dan berhenti.
+				if (_isOverTrash)
+				{
+					QueueFree();
+					return;
+				}
 
 				// --- LOGIKA SNAP ---
 				if (_overlappingSlot != null && !_overlappingSlot.IsFilled && _overlappingSlot.TargetShape == this.TypeToCreate)
@@ -207,26 +205,26 @@ public partial class Bentuk : Area2D
 					var targetCenter = new Vector2(targetMatrix[0, 2], targetMatrix[1, 2]);
 					float distance = currentCenter.DistanceTo(targetCenter);
 
-                    if (distance < SNAP_DISTANCE_THRESHOLD)
-                    {
-                        _matriksTransformasi = (float[,])_overlappingSlot.TargetMatrix.Clone();
-                        ApplyTransformationAndDraw();
-                        _snappedToSlot = _overlappingSlot;
-                        _snappedToSlot.IsFilled = true;
-                        GD.Print("Snap berhasil untuk " + _overlappingSlot.Name);
-                    }
-                }
-            }
-        }
+					if (distance < SNAP_DISTANCE_THRESHOLD)
+					{
+						_matriksTransformasi = (float[,])_overlappingSlot.TargetMatrix.Clone();
+						ApplyTransformationAndDraw();
+						_snappedToSlot = _overlappingSlot;
+						_snappedToSlot.IsFilled = true;
+						GD.Print("Snap berhasil untuk " + _overlappingSlot.Name);
+					}
+				}
+			}
+		}
 
-        // --- Bagian 2: Logika Rotasi (Keyboard) ---
-        if (_isDragging && @event is InputEventKey eventKey && eventKey.Pressed)
-        {
-            // Kode rotasi Anda yang sudah ada tetap di sini...
-            // (Ini bisa dipindahkan ke _Process dengan Input.IsKeyPressed jika masih bermasalah,
-            // tapi dengan perbaikan di atas, seharusnya sudah stabil)
-        }
-    }
+		// --- Bagian 2: Logika Rotasi (Keyboard) ---
+		if (_isDragging && @event is InputEventKey eventKey && eventKey.Pressed)
+		{
+			// Kode rotasi Anda yang sudah ada tetap di sini...
+			// (Ini bisa dipindahkan ke _Process dengan Input.IsKeyPressed jika masih bermasalah,
+			// tapi dengan perbaikan di atas, seharusnya sudah stabil)
+		}
+	}
 
 	public override void _Process(double delta) {
 		if (_isDragging) 
